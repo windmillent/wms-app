@@ -9,8 +9,6 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script> 
-    
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .loading { animation: spin 1s linear infinite; }
@@ -66,7 +64,6 @@
         const X = () => React.createElement('svg', { width: '24', height: '24', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }, React.createElement('path', { d: 'M18 6 6 18' }), React.createElement('path', { d: 'M6 6l12 12' }));
         const Save = () => React.createElement('svg', { width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }, React.createElement('path', { d: 'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z' }), React.createElement('polyline', { points: '17,21 17,13 7,13 7,21' }), React.createElement('polyline', { points: '7,3 7,8 15,8' }));
         const RefreshCw = ({ className }) => React.createElement('svg', { width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', className }, React.createElement('path', { d: 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8' }), React.createElement('path', { d: 'M21 3v5h-5' }), React.createElement('path', { d: 'M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16' }), React.createElement('path', { d: 'M8 16H3v5' }));
-        // const Globe = () => ... (삭제됨)
         const Database = () => React.createElement('svg', { width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }, React.createElement('ellipse', { cx: '12', cy: '5', rx: '9', ry: '3' }), React.createElement('path', { d: 'M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5' }), React.createElement('path', { d: 'M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3' }));
         const LogIn = () => React.createElement('svg', { width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }, React.createElement('path', { d: 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4' }), React.createElement('polyline', { points: '10 17 15 12 10 7' }), React.createElement('line', { x1: '15', y1: '12', x2: '3', y2: '12' }));
         const LogOut = () => React.createElement('svg', { width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }, React.createElement('path', { d: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' }), React.createElement('polyline', { points: '16 17 21 12 16 7' }), React.createElement('line', { x1: '21', y1: '12', x2: '9', y2: '12' }));
@@ -87,7 +84,6 @@
             const [accessToken, setAccessToken] = useState(null);
             const [googleClient, setGoogleClient] = useState(null);
             const [searchAttempted, setSearchAttempted] = useState(false);
-            // const [showSetup, setShowSetup] = useState(false); // (삭제됨)
             const [showWarehouseModal, setShowWarehouseModal] = useState(false);
             const [selectedWarehouse, setSelectedWarehouse] = useState(null);
             const [showAddLocation, setShowAddLocation] = useState(false);
@@ -100,43 +96,70 @@
             const [editData, setEditData] = useState({}); 
             const [newLocation, setNewLocation] = useState({}); 
 
-            // --- !!! (신규) 설정값 하드코딩 !!! ---
-             // --- 설정값 상태 (로컬스토리지) ---
+            // --- 설정값 하드코딩 ---
             const [sheetsConfig, setSheetsConfig] = useState({
-                locationSheetId:'11xp8iLaI3oCVDylAUrSZyNKVLntgjaUxSH6dmfvq4po',
-                productSheetId:'1MyoiAM3jL-WULsZJmbQBH97dpqR1VldpvkZ4dbue6FY',
-                apiKey:'AIzaSyB1RFJ10MlBnfrTZYK4IQHgyuMbQ_MGvGo',
-                clientId:'186232173029-7d25ng2i9k4jg5t23c811t2itn34vibd.apps.googleusercontent.com'
+                locationSheetId: '11xp8iIal3oCVDyLAUrSZyNKvLntgjaUX5H6dmfvq4po', 
+                productSheetId: '1MyoiAM3jL-WULsZJmbQBH97dpqR1VIdpvkZ4dbue6FY', 
+                apiKey: 'AIzaSyB1RFJ10MlBnfrTZYK4IQHgyuMbQ_MGvGo', 
+                clientId: '186232173029-7d25ng2i9k4jg5t23c811t2itn34vibd.apps.googleusercontent.com'
             });
 
-            // --- Google Auth 클라이언트 초기화 ---
+            // --- Google Auth 클라이언트 초기화 (동적 스크립트 로더) ---
             const loadSheetDataCallback = useCallback((token) => {
                 loadFromGoogleSheets(token);
-            }, [sheetsConfig.locationSheetId, sheetsConfig.productSheetId]); 
+            }, [sheetsConfig.locationSheetId, sheetsConfig.productSheetId]); // (참고: sheetsConfig는 이제 고정값이지만, 구조상 의존성 유지)
 
             useEffect(() => {
-                // (기존엔 localStorage에서 읽었으나, 이젠 하드코딩된 clientId를 즉시 사용)
-                if (sheetsConfig.clientId && window.google) { 
-                    try {
-                        const client = google.accounts.oauth2.initTokenClient({
-                            client_id: sheetsConfig.clientId,
-                            scope: 'https://www.googleapis.com/auth/spreadsheets', 
-                            callback: (tokenResponse) => {
-                                if (tokenResponse && tokenResponse.access_token) {
-                                    setAccessToken(tokenResponse.access_token);
-                                    setIsLoggedIn(true); 
-                                    loadSheetDataCallback(tokenResponse.access_token); 
-                                }
-                            },
-                        });
-                        setGoogleClient(client);
-                    } catch (error) { console.error("GSI 클라이언트 초기화 오류:", error); }
-                } else if (!sheetsConfig.clientId) {
-                    alert("오류: 클라이언트 ID가 코드에 하드코딩되지 않았습니다.");
+                if (sheetsConfig.clientId) {
+                    const script = document.createElement('script');
+                    script.src = 'https://accounts.google.com/gsi/client';
+                    script.async = true;
+                    script.defer = true;
+                    
+                    script.onload = () => {
+                        if (!window.google || !window.google.accounts) {
+                            console.error("Google GSI 스크립트는 로드되었으나, 'google.accounts' 객체를 찾을 수 없습니다.");
+                            alert("Google 인증 라이브러리 로드에 실패했습니다. 페이지를 새로고침 해주세요.");
+                            return;
+                        }
+                        try {
+                            const client = google.accounts.oauth2.initTokenClient({
+                                client_id: sheetsConfig.clientId,
+                                scope: 'https://www.googleapis.com/auth/spreadsheets', 
+                                callback: (tokenResponse) => {
+                                    if (tokenResponse && tokenResponse.access_token) {
+                                        setAccessToken(tokenResponse.access_token);
+                                        setIsLoggedIn(true); 
+                                        loadSheetDataCallback(tokenResponse.access_token); 
+                                    }
+                                },
+                            });
+                            setGoogleClient(client);
+                        } catch (error) { 
+                            console.error("GSI 클라이언트 초기화 오류:", error); 
+                            alert("Google 인증 클라이언트 초기화에 실패했습니다.");
+                        }
+                    };
+                    
+                    script.onerror = () => {
+                        alert("Google 인증 스크립트를 불러오는 데 실패했습니다. 인터넷 연결을 확인하세요.");
+                    };
+                    
+                    document.body.appendChild(script);
+
+                    return () => {
+                        if(document.body.contains(script)) {
+                            document.body.removeChild(script);
+                        }
+                    };
+
+                } else {
+                     alert("오류: 클라이언트 ID가 코드에 설정되지 않았습니다.");
                 }
-            }, [sheetsConfig.clientId, loadSheetDataCallback]); // (이제 clientId는 고정값임)
+            }, [sheetsConfig.clientId, loadSheetDataCallback]); 
             
-            // --- '추가 모달' 실시간 위치 감시 useEffect ---
+            
+            // --- '추가 모달' 실시간 위치 감시 useEffect (혼적용) ---
             useEffect(() => {
                 if (!showAddLocation) {
                     setExistingItemsAtLocation([]); 
@@ -152,19 +175,23 @@
                 const existingItems = locationData.filter(item => item['로케이션번호'] === locationNumber);
                 setExistingItemsAtLocation(existingItems); 
                 setItemsToDeleteSelection(new Set()); 
-            }, [newLocation.warehouse, newLocation.type, newLocation.rackNum, newLocation.tier, newLocation.rackPos, newLocation.groundRow, newLocation.groundPos, locationData, showAddLocation]); 
+            }, [newLocation, locationData, showAddLocation]); // <-- 의존성 수정됨
 
             // --- 로그인/로그아웃 함수 ---
-            const handleAuthClick = () => { if (googleClient) { googleClient.requestAccessToken(); } else { alert('Google Client가 초기화되지 않았습니다.'); } };
+            const handleAuthClick = () => { 
+                if (googleClient) { 
+                    googleClient.requestAccessToken(); 
+                } else { 
+                    alert('Google Client가 초기화되지 않았습니다. 잠시 후 다시 시도해주세요.'); 
+                } 
+            };
             const handleSignoutClick = () => { if (accessToken) { try { google.accounts.oauth2.revoke(accessToken, () => { setAccessToken(null); setIsLoggedIn(false); setLocationData([]); setProductData([]); setLastSync(null); alert('로그아웃되었습니다.'); }); } catch(error) { setAccessToken(null); setIsLoggedIn(false); setLocationData([]); setProductData([]); setLastSync(null); } } };
 
             // --- 데이터 로드 함수 (API 키 로직 제거) ---
             const loadFromGoogleSheets = useCallback(async (token = accessToken) => { 
                 const { locationSheetId, productSheetId } = sheetsConfig;
-                // (이제 OAuth 토큰이 유일한 인증 수단)
-                if (!token) { alert('Google 로그인이 필요합니다.'); return; } 
+                if (!token) { /* alert('Google 로그인이 필요합니다.'); */ return; } // 로그인 시 자동 호출되므로 경고 제거
                 if (!locationSheetId || !productSheetId) { alert('시트 ID가 코드에 설정되지 않았습니다.'); return; }
-                
                 setIsLoading(true);
                 const createFetchRequest = (sheetId, range = 'Sheet1') => { 
                     let url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`; 
@@ -199,29 +226,22 @@
                     setLocationData(processSheetData(results[0])); 
                     setProductData(processSheetData(results[1])); 
                     setLastSync(new Date().toLocaleString());
-                    // alert('데이터를 성공적으로 로드했습니다!'); // 로그인 시 자동 로드되므로 알림은 뺌
+                    // alert('데이터를 성공적으로 로드했습니다!'); // 자동 로드 시 알림 제거
                 } catch (error) {
                     console.error('로드 오류:', error);
                     alert(`데이터 로드 중 오류가 발생했습니다.\n${error.message}`);
                 } finally {
                     setIsLoading(false);
                 }
-            }, [accessToken, sheetsConfig]); // (apiKey 의존성 제거)
+            }, [accessToken, sheetsConfig]); 
 
-            // --- 데이터 로드 트리거 useEffect (API 키 로직 제거) ---
+            // --- 데이터 로드 트리거 useEffect ---
             useEffect(() => {
-                // (로그인 시 GSI 콜백에서 loadFromGoogleSheets가 호출되므로 이 로직은 사실상 예비용)
-                // (API 키로 자동 로드하는 기능 삭제)
-                if (!isLoggedIn && !googleClient) {
-                    // loadSampleData(); // (샘플 데이터도 필요 없음)
-                }
-            }, [isLoggedIn, googleClient]); 
+                // (로그인 시 GSI 콜백에서 loadFromGoogleSheets가 호출됨)
+            }, []); 
 
-            // --- 샘플 데이터 로드 (이제 사용 안함) ---
-            const loadSampleData = () => {};
-
-            // --- 설정 저장 (삭제됨) ---
-            // const saveConfig = () => {}; 
+            const loadSampleData = () => {}; 
+            // const saveConfig = () => {}; (삭제됨)
 
             // --- 메인 검색 기능 (유통사/레이블 추가) ---
             const handleSearch = () => {
@@ -325,7 +345,7 @@
                     const result = await response.json();
                     if (response.ok) {
                         alert(`수정 완료: ${editingLocNum}이(가) 수정되었습니다.`);
-                        loadFromGoogleSheets(accessToken); // 수정 후 데이터 전체 새로고침
+                        loadFromGoogleSheets(accessToken); 
                         setShowEditModal(false); 
                     } else {
                         throw new Error(result.error.message || '데이터 수정에 실패했습니다.');
@@ -352,7 +372,7 @@
                 setExistingItemsAtLocation([]); 
             };
 
-            // --- (신규) '혼적' (기존 위치에 추가) 함수 ---
+            // --- '혼적' (기존 위치에 추가) 함수 ---
             const handleMixLoad = (location) => {
                 const locNum = location['로케이션번호'];
                 const parts = locNum.split('-');
@@ -377,17 +397,17 @@
                 setShowWarehouseModal(false); 
             };
 
-            // --- 새 로케이션 번호 생성기 ---
+            // --- 새 로케이션 번호 생성기 (!!! 2자리 버그 수정됨 !!!) ---
             const generateLocationNumber = (data) => {
                 if (!data || !data.warehouse) return '';
                 const { warehouse, type, rackNum, tier, rackPos, groundRow, groundPos } = data;
                 if (type === 'P') {
                     if (!rackNum || !tier || !rackPos || !rackPos.trim()) return `${warehouse}-${type}${rackNum || '??'}-${tier || '??'}??`;
-                    const pos = rackPos.padStart(2, '0');
+                    const pos = rackPos.padStart(2, '0'); // P-타입 포지션 (2자리)
                     return `${warehouse}-${type}${rackNum}-${tier}${pos}`;
-                } else { 
+                } else { // type === 'G'
                     if (!groundRow || !groundPos || !groundPos.trim()) return `${warehouse}-${type}${groundRow || '??'}-???`;
-                    const pos = groundPos.padStart(3, '0'); 
+                    const pos = groundPos.padStart(2, '0'); // <-- !!! 3에서 2로 수정 !!!
                     return `${warehouse}-${type}${groundRow}-${pos}`;
                 }
             };
@@ -432,7 +452,7 @@
                 }
             };
             
-            // --- (신규) '선택 삭제' API 연동 함수 (Batch Delete) ---
+            // --- '선택 삭제' API 연동 함수 (Batch Delete) ---
             const handleDeleteSelectedItems = async () => {
                 if (!isLoggedIn) { alert('로그인이 필요합니다.'); return; }
                 const rowsToDelete = Array.from(itemsToDeleteSelection); 
@@ -523,14 +543,11 @@
                 }
             };
 
-            // --- (신규) 체크박스 핸들러 ---
+            // --- 체크박스 핸들러 ---
             const handleItemDeleteToggle = (rowIndex) => {
                 const newSelection = new Set(itemsToDeleteSelection);
-                if (newSelection.has(rowIndex)) {
-                    newSelection.delete(rowIndex);
-                } else {
-                    newSelection.add(rowIndex);
-                }
+                if (newSelection.has(rowIndex)) { newSelection.delete(rowIndex); } 
+                else { newSelection.add(rowIndex); }
                 setItemsToDeleteSelection(newSelection);
             };
 
@@ -599,8 +616,6 @@
                 React.createElement('h1', { className: 'text-3xl font-bold text-center mb-8 text-gray-800' }, React.createElement(Package, { style: { display: 'inline-block', marginRight: '8px' } }), 'RYU 재고관리 시스템'), 
                 React.createElement('div', { className: 'bg-white rounded-lg shadow-md p-4 mb-6' },
                     React.createElement('div', { className: 'flex gap-2 flex-wrap items-center' },
-                        // --- !!! [설정] 버튼 삭제됨 !!! ---
-                        // React.createElement('button', { onClick: () => setShowSetup(true), ... }, '설정'),
                         React.createElement('button', { onClick: () => loadFromGoogleSheets(accessToken), disabled: isLoading, className: `px-4 py-2 rounded text-white flex items-center gap-2 ${isLoading ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'}` }, React.createElement(RefreshCw, { className: isLoading ? 'loading' : '' }), '새로고침'),
                         React.createElement('button', { onClick: () => exportToCSV(locationData, 'full_inventory_report.csv'), disabled: locationData.length === 0, className: 'px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600 flex items-center gap-2 disabled:bg-gray-400' }, React.createElement(Download), 'CSV 전체 다운로드'),
                         !isLoggedIn ? 
@@ -621,7 +636,6 @@
                         }, React.createElement(Plus), '로케이션 추가')
                     )
                 ),
-                
                 (searchResults.length > 0 && !selectedProduct) && React.createElement('div', { className: 'bg-white rounded-lg shadow-md p-6 mb-6' },
                     React.createElement('h2', { className: 'text-xl font-semibold mb-4' }, `검색 결과 (${searchResults.length}건)`),
                     React.createElement('div', { className: 'space-y-3' },
@@ -742,8 +756,7 @@
                 ),
 
                 // --- 설정 모달 (삭제됨) ---
-                // showSetup && React.createElement(SettingsModal),
-
+                
                 // --- 로케이션 추가/관리 모달 (신규 로직 적용됨) ---
                 showAddLocation && React.createElement('div', { className: 'modal-overlay' },
                     React.createElement('div', { className: 'bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto' }, 
@@ -753,7 +766,6 @@
                         ),
                         React.createElement('div', { className: 'space-y-4' },
                             React.createElement('div', { className: 'space-y-2 p-4 border rounded bg-gray-50' },
-                                // (로케이션 생성기 UI)
                                 React.createElement('div', { className: 'grid grid-cols-2 gap-2' },
                                     React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '창고'), React.createElement('select', { value: newLocation.warehouse || 'A1', onChange: (e) => setNewLocation({...newLocation, warehouse: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded' }, ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map(wh => React.createElement('option', { key: wh, value: wh }, wh)))),
                                     React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '타입'), React.createElement('select', { value: newLocation.type || 'P', onChange: (e) => setNewLocation({...newLocation, type: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded' }, React.createElement('option', { value: 'P' }, 'P (랙)'), React.createElement('option', { value: 'G' }, 'G (그라운드)')))
@@ -766,15 +778,14 @@
                                     ) : 
                                     React.createElement('div', { className: 'grid grid-cols-2 gap-2' },
                                         React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '줄 번호'), React.createElement('input', { type: 'text', value: newLocation.groundRow || '01', onChange: (e) => setNewLocation({...newLocation, groundRow: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '01' })),
-                                        React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '순서'), React.createElement('input', { type: 'text', value: newLocation.groundPos || '', onChange: (e) => setNewLocation({...newLocation, groundPos: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '001 (입력)' }))
+                                        React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '순서'), React.createElement('input', { type: 'text', value: newLocation.groundPos || '', onChange: (e) => setNewLocation({...newLocation, groundPos: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '01 (입력)' })) // <-- 3자리->2자리 padStart 수정에 맞춰 placeholder 수정
                                     ),
                                 React.createElement('div', null,
                                     React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '선택된 로케이션'),
                                     React.createElement('input', { type: 'text', value: generateLocationNumber(newLocation), disabled: true, className: 'w-full px-3 py-2 border border-gray-300 rounded bg-gray-200 font-mono text-center font-bold' })
                                 )
                             ),
-                            
-                            existingItemsAtLocation.length > 0 && React.createElement('div', { className: 'space-y-2 p-4 border rounded border-blue-300 bg-blue-50' }, // <-- 색상 변경 (정보)
+                            existingItemsAtLocation.length > 0 && React.createElement('div', { className: 'space-y-2 p-4 border rounded border-blue-300 bg-blue-50' }, 
                                 React.createElement('h3', { className: 'font-bold text-blue-700' }, `[${generateLocationNumber(newLocation)}] 기존 적재 목록 (${existingItemsAtLocation.length}건)`),
                                 React.createElement('div', { className: 'max-h-32 overflow-y-auto border rounded bg-white' },
                                     existingItemsAtLocation.map(item => 
@@ -797,8 +808,7 @@
                                     className: 'w-full mt-2 px-4 py-2 bg-red-600 text-white rounded disabled:bg-gray-400 hover:bg-red-700 flex items-center justify-center gap-2'
                                 }, React.createElement(Trash), `선택한 ${itemsToDeleteSelection.size}개 항목 즉시 삭제`)
                             ),
-                            
-                            React.createElement('div', { className: 'space-y-3 p-4 border rounded border-gray-300' }, // <-- 배경색 제거
+                            React.createElement('div', { className: 'space-y-3 p-4 border rounded border-gray-300' }, 
                                 React.createElement('h3', { className: 'font-bold text-gray-700' }, existingItemsAtLocation.length > 0 ? '[새 상품 혼적]' : '[새 상품 적재]'),
                                 React.createElement('div', { className: 'flex gap-2' },
                                     React.createElement('input', { type: 'radio', id: 'add_direct', name: 'inputMode', value: 'direct', checked: inputMode === 'direct', onChange: (e) => setInputMode(e.target.value), className: 'toggle-radio' }),
@@ -935,11 +945,8 @@
             );
         };
 
-        // (신규) 모든 외부 스크립트(Google GSI)가 로드된 후 React 앱을 실행
-        window.onload = () => {
-            ReactDOM.render(React.createElement(InventoryApp), document.getElementById('root'));
-        };
+        // --- window.onload 래퍼 제거됨. 동적 로더가 모든 것을 처리. ---
+        ReactDOM.render(React.createElement(InventoryApp), document.getElementById('root'));
     </script>
 </body>
 </html>
-
