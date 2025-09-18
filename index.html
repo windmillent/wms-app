@@ -11,6 +11,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        /* --- ▼▼▼ 이 부분을 새로 추가 ▼▼▼ --- */
+        #root {
+            position: relative;
+            z-index: 0;
+        }
+        /* --- ▲▲▲ 여기까지 추가 ▲▲▲ --- */
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { 
             from { transform: rotate(0deg); } 
@@ -950,3 +956,4 @@
     </script>
 </body>
 </html>
+
