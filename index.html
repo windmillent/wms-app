@@ -127,6 +127,9 @@
                             alert("Google 인증 라이브러리 로드에 실패했습니다. 페이지를 새로고침 해주세요.");
                             return;
                         }
+                        // --- ▼▼▼ 바로 이 줄을 추가!! ▼▼▼ ---
+                        google.accounts.id.disableAutoSelect(); // 모바일 클릭을 막는 투명 iframe 자동실행 방지
+                        // --- ▲▲▲ 여기까지 추가 ▲▲▲ ---
                         try {
                             const client = google.accounts.oauth2.initTokenClient({
                                 client_id: sheetsConfig.clientId,
@@ -961,5 +964,6 @@
     </script>
 </body>
 </html>
+
 
 
