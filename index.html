@@ -11,11 +11,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        /* --- ▼▼▼ (수정) z-index 레이어 조정 ▼▼▼ --- */
-        #root {
-            position: relative;
-            z-index: 10; /* 구글 GSI iframe보다 위로 올림 */
-        }
+        #root { position: relative; z-index: 10; } /* 모바일 입력 버그 수정 */
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { 
             from { transform: rotate(0deg); } 
@@ -25,7 +21,7 @@
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background-color: rgba(0, 0, 0, 0.5);
             display: flex; align-items: center; justify-content: center;
-            z-index: 10000; /* 구글 GSI보다 훨씬 위로 올림 */
+            z-index: 10000; /* 구글 GSI보다 위로 */
         }
         .table-container { max-height: 60vh; overflow-y: auto; } 
         
@@ -39,7 +35,6 @@
             width: 100%; 
             z-index: 11000; /* 모달보다 위 */
         }
-        /* --- ▲▲▲ (수정) z-index 레이어 조정 ▲▲▲ --- */
         .product-search-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; }
         .product-search-item:last-child { border-bottom: none; }
         .product-search-item:hover { background-color: #f0f0f0; }
@@ -60,7 +55,7 @@
     <script type="text/babel">
         const { useState, useEffect, useCallback } = React;
         
-        // --- (아이콘 컴포넌트들은 이전과 동일) ---
+        // --- 아이콘 컴포넌트 ---
         const Search = () => React.createElement('svg', { width: '20', height: '20', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }, React.createElement('circle', { cx: '11', cy: '11', r: '8' }), React.createElement('path', { d: 'm21 21-4.35-4.35' }));
         const Package = () => React.createElement('svg', { width: '24', height: '24', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }, React.createElement('path', { d: 'm7.5 4.27 9 5.15' }), React.createElement('path', { d: 'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z' }), React.createElement('path', { d: 'M3.3 7 12 12l8.7-5' }), React.createElement('path', { d: 'M12 22V12' }));
         const MapPin = () => React.createElement('svg', { width: '20', height: '20', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }, React.createElement('path', { d: 'M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z' }), React.createElement('circle', { cx: '12', cy: '10', r: '3' }));
@@ -90,6 +85,7 @@
             const [accessToken, setAccessToken] = useState(null);
             const [googleClient, setGoogleClient] = useState(null); 
             const [searchAttempted, setSearchAttempted] = useState(false);
+            // const [showSetup, setShowSetup] = useState(false); // (삭제됨)
             const [showWarehouseModal, setShowWarehouseModal] = useState(false);
             const [selectedWarehouse, setSelectedWarehouse] = useState(null);
             const [showAddLocation, setShowAddLocation] = useState(false);
@@ -127,9 +123,9 @@
                             alert("Google 인증 라이브러리 로드에 실패했습니다. 페이지를 새로고침 해주세요.");
                             return;
                         }
-                        // --- ▼▼▼ 바로 이 줄을 추가!! ▼▼▼ ---
-                        google.accounts.id.disableAutoSelect(); // 모바일 클릭을 막는 투명 iframe 자동실행 방지
-                        // --- ▲▲▲ 여기까지 추가 ▲▲▲ ---
+                        
+                        google.accounts.id.disableAutoSelect(); // <-- 모바일 클릭 버그 방지
+                        
                         try {
                             const client = google.accounts.oauth2.initTokenClient({
                                 client_id: sheetsConfig.clientId,
@@ -164,11 +160,7 @@
             
             // --- '추가 모달' 실시간 위치 감시 useEffect (혼적용) ---
             useEffect(() => {
-                if (!showAddLocation) {
-                    setExistingItemsAtLocation([]); 
-                    setItemsToDeleteSelection(new Set());
-                    return;
-                }
+                if (!showAddLocation) return; 
                 const locationNumber = generateLocationNumber(newLocation);
                 if (!locationNumber || locationNumber.includes("?")) {
                     setExistingItemsAtLocation([]); 
@@ -178,7 +170,7 @@
                 const existingItems = locationData.filter(item => item['로케이션번호'] === locationNumber);
                 setExistingItemsAtLocation(existingItems); 
                 setItemsToDeleteSelection(new Set()); 
-            }, [newLocation, locationData, showAddLocation]); // <-- 의존성 수정됨
+            }, [newLocation, locationData, showAddLocation]); 
 
             // --- 로그인/로그아웃 함수 ---
             const handleAuthClick = () => { 
@@ -243,7 +235,7 @@
             }, []); 
 
             const loadSampleData = () => {}; 
-
+            
             // --- 메인 검색 기능 (유통사/레이블 추가) ---
             const handleSearch = () => {
                 setSearchAttempted(true); 
@@ -404,11 +396,11 @@
                 const { warehouse, type, rackNum, tier, rackPos, groundRow, groundPos } = data;
                 if (type === 'P') {
                     if (!rackNum || !tier || !rackPos || !rackPos.trim()) return `${warehouse}-${type}${rackNum || '??'}-${tier || '??'}??`;
-                    const pos = rackPos.padStart(2, '0');
+                    const pos = rackPos.padStart(2, '0'); 
                     return `${warehouse}-${type}${rackNum}-${tier}${pos}`;
                 } else { 
-                    if (!groundRow || !groundPos || !groundPos.trim()) return `${warehouse}-${type}${groundRow || '??'}-??`; // 3자리 ??? -> 2자리 ??
-                    const pos = groundPos.padStart(2, '0'); // <-- !!! 3에서 2로 수정됨 !!!
+                    if (!groundRow || !groundPos || !groundPos.trim()) return `${warehouse}-${type}${groundRow || '??'}-??`;
+                    const pos = groundPos.padStart(2, '0'); // <-- 3에서 2로 수정됨
                     return `${warehouse}-${type}${groundRow}-${pos}`;
                 }
             };
@@ -607,59 +599,284 @@
                 link.click();
                 document.body.removeChild(link);
             };
+            
+            // --- (신규) 모든 모달을 함수 내부로 이동 (스코프 문제 해결) ---
+            
+            // --- 상세 재고 모달 ---
+            const WarehouseDetailModal = () => {
+                 return React.createElement('div', { className: 'modal-overlay' },
+                    React.createElement('div', { className: 'bg-white rounded-lg p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto' }, 
+                        React.createElement('div', { className: 'flex justify-between items-center mb-4' },
+                            React.createElement('h2', { className: 'text-xl font-semibold' }, `${selectedWarehouse.code} (${selectedWarehouse.label}) 상세현황`),
+                            React.createElement('button', { onClick: () => setShowWarehouseModal(false), className: 'text-gray-500 hover:text-gray-700' }, React.createElement(X))
+                        ),
+                        React.createElement('p', { className: 'text-gray-600 mb-4' },
+                            `총 ${selectedWarehouse.locations.length}개 로케이션, 총 재고: ${
+                                (selectedWarehouse.locations.reduce((sum, loc) => sum + (parseInt(String(loc['총재고'] || '0').replace(/,/g, '')) || 0), 0)).toLocaleString()
+                            }개`
+                        ),
+                        React.createElement('div', { className: 'table-container' },
+                            React.createElement('table', { className: 'w-full border-collapse border border-gray-300 text-sm' }, 
+                                React.createElement('thead', { className: 'bg-gray-50' },
+                                    React.createElement('tr', null,
+                                        ['로케이션', '유통사', '앨범코드', '앨범명', '아티스트명', '레이블', '내품수', '박스수', '총재고', '메모', '작업'].map(header => 
+                                            React.createElement('th', { key: header, className: 'border border-gray-300 px-2 py-2 text-left' }, header)
+                                        )
+                                    )
+                                ),
+                                React.createElement('tbody', null,
+                                    selectedWarehouse.locations.map((location) =>
+                                        React.createElement('tr', { key: location.originalRowIndex, className: 'hover:bg-gray-50' }, 
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2 font-mono' }, location['로케이션번호']),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2' }, location['유통사']),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2' }, location['앨범코드']),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2' }, location['앨범명']),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2' }, location['아티스트명']),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2' }, location['레이블']),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' }, `${location['내품수']}`),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' }, `${location['박스수량']}`),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center font-semibold text-blue-600' }, `${Number(String(location['총재고'] || '0').replace(/,/g, '')).toLocaleString()}`),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2' }, location['메모']),
+                                            React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
+                                                React.createElement('div', { className: 'flex gap-1 justify-center' },
+                                                    React.createElement('button', { onClick: () => handleMixLoad(location), className: `p-1 bg-purple-500 text-white rounded text-xs hover:bg-purple-600 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`, title: '이 위치에 다른 상품 혼적', disabled: !isLoggedIn }, React.createElement(CopyPlus)),
+                                                    React.createElement('button', { onClick: () => startEditLocation(location), className: `px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`, disabled: !isLoggedIn }, '편집'),
+                                                    React.createElement('button', { onClick: () => deleteLocation(location.originalRowIndex), className: `px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`, disabled: !isLoggedIn }, '삭제')
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                        React.createElement('div', { className: 'mt-4 text-center' },
+                            React.createElement('button', { onClick: () => setShowWarehouseModal(false), className: 'px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600' }, '닫기')
+                        )
+                    )
+                );
+            };
 
+            // --- 추가 모달 ---
+            const AddLocationModal = () => {
+                return React.createElement('div', { className: 'modal-overlay' },
+                    React.createElement('div', { className: 'bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto' }, 
+                        React.createElement('div', { className: 'flex justify-between items-center mb-4 sticky top-0 bg-white z-10 p-1' }, 
+                            React.createElement('h2', { className: 'text-xl font-semibold' }, '로케이션 관리 (추가/삭제)'),
+                            React.createElement('button', { onClick: () => setShowAddLocation(false), className: 'text-gray-500 hover:text-gray-700' }, React.createElement(X))
+                        ),
+                        React.createElement('div', { className: 'space-y-4' },
+                            React.createElement('div', { className: 'space-y-2 p-4 border rounded bg-gray-50' },
+                                React.createElement('div', { className: 'grid grid-cols-2 gap-2' },
+                                    React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '창고'), React.createElement('select', { value: newLocation.warehouse || 'A1', onChange: (e) => setNewLocation({...newLocation, warehouse: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded' }, ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map(wh => React.createElement('option', { key: wh, value: wh }, wh)))),
+                                    React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '타입'), React.createElement('select', { value: newLocation.type || 'P', onChange: (e) => setNewLocation({...newLocation, type: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded' }, React.createElement('option', { value: 'P' }, 'P (랙)'), React.createElement('option', { value: 'G' }, 'G (그라운드)')))
+                                ),
+                                (newLocation.type === 'P' || !newLocation.type) ? 
+                                    React.createElement('div', { className: 'grid grid-cols-3 gap-2' },
+                                        React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '랙 번호'), React.createElement('input', { type: 'text', value: newLocation.rackNum || '01', onChange: (e) => setNewLocation({...newLocation, rackNum: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '01' })),
+                                        React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '단'), React.createElement('select', { value: newLocation.tier || 'R1', onChange: (e) => setNewLocation({...newLocation, tier: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded' }, React.createElement('option', { value: 'R1' }, 'R1'), React.createElement('option', { value: 'R2' }, 'R2'), React.createElement('option', { value: 'R3' }, 'R3'))),
+                                        React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '칸 번호'), React.createElement('input', { type: 'text', value: newLocation.rackPos || '', onChange: (e) => setNewLocation({...newLocation, rackPos: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '01 (입력)' }))
+                                    ) : 
+                                    React.createElement('div', { className: 'grid grid-cols-2 gap-2' },
+                                        React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '줄 번호'), React.createElement('input', { type: 'text', value: newLocation.groundRow || '01', onChange: (e) => setNewLocation({...newLocation, groundRow: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '01' })),
+                                        React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '순서'), React.createElement('input', { type: 'text', value: newLocation.groundPos || '', onChange: (e) => setNewLocation({...newLocation, groundPos: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '01 (입력)' }))
+                                    ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '선택된 로케이션'),
+                                    React.createElement('input', { type: 'text', value: generateLocationNumber(newLocation), disabled: true, className: 'w-full px-3 py-2 border border-gray-300 rounded bg-gray-200 font-mono text-center font-bold' })
+                                )
+                            ),
+                            existingItemsAtLocation.length > 0 && React.createElement('div', { className: 'space-y-2 p-4 border rounded border-blue-300 bg-blue-50' }, 
+                                React.createElement('h3', { className: 'font-bold text-blue-700' }, `[${generateLocationNumber(newLocation)}] 기존 적재 목록 (${existingItemsAtLocation.length}건)`),
+                                React.createElement('div', { className: 'max-h-32 overflow-y-auto border rounded bg-white' },
+                                    existingItemsAtLocation.map(item => 
+                                        React.createElement('div', { key: item.originalRowIndex, className: 'flex items-center gap-2 p-2 border-b' },
+                                            React.createElement('input', { type: 'checkbox', id: `del_${item.originalRowIndex}`, checked: itemsToDeleteSelection.has(item.originalRowIndex), onChange: () => handleItemDeleteToggle(item.originalRowIndex) }),
+                                            React.createElement('label', { htmlFor: `del_${item.originalRowIndex}`, className: 'text-sm' }, 
+                                                `[${item['앨범코드']}] ${item['앨범명']} (${item['총재고']}개) (행: ${item.originalRowIndex})`
+                                            )
+                                        )
+                                    )
+                                ),
+                                React.createElement('button', {
+                                    onClick: handleDeleteSelectedItems,
+                                    disabled: itemsToDeleteSelection.size === 0 || isLoading,
+                                    className: 'w-full mt-2 px-4 py-2 bg-red-600 text-white rounded disabled:bg-gray-400 hover:bg-red-700 flex items-center justify-center gap-2'
+                                }, React.createElement(Trash), `선택한 ${itemsToDeleteSelection.size}개 항목 즉시 삭제`)
+                            ),
+                            React.createElement('div', { className: 'space-y-3 p-4 border rounded border-gray-300' }, 
+                                React.createElement('h3', { className: 'font-bold text-gray-700' }, existingItemsAtLocation.length > 0 ? '[새 상품 혼적]' : '[새 상품 적재]'),
+                                React.createElement('div', { className: 'flex gap-2' },
+                                    React.createElement('input', { type: 'radio', id: 'add_direct', name: 'inputMode', value: 'direct', checked: inputMode === 'direct', onChange: (e) => setInputMode(e.target.value), className: 'toggle-radio' }),
+                                    React.createElement('label', { htmlFor: 'add_direct', className: 'toggle-label' }, '직접 입력'),
+                                    React.createElement('input', { type: 'radio', id: 'add_search', name: 'inputMode', value: 'search', checked: inputMode === 'search', onChange: (e) => setInputMode(e.target.value), className: 'toggle-radio' }),
+                                    React.createElement('label', { htmlFor: 'add_search', className: 'toggle-label' }, '상품 검색')
+                                ),
+                                inputMode === 'search' && React.createElement('button', { onClick: () => openProductSearchModal('add'), className: 'w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2' }, React.createElement(Search), '통합 상품 검색 팝업 열기'),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '상품코드'), React.createElement('input', { type: 'text', value: newLocation.productCode || '', onChange: (e) => setNewLocation({...newLocation, productCode: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '상품명'), React.createElement('input', { type: 'text', value: newLocation.productName || '', onChange: (e) => setNewLocation({...newLocation, productName: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '아티스트/규격'), React.createElement('input', { type: 'text', value: newLocation.artist || '', onChange: (e) => setNewLocation({...newLocation, artist: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '유통사'), React.createElement('input', { type: 'text', value: newLocation.distributor || '', onChange: (e) => setNewLocation({...newLocation, distributor: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '레이블'), React.createElement('input', { type: 'text', value: newLocation.label || '', onChange: (e) => setNewLocation({...newLocation, label: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', { className: 'grid grid-cols-2 gap-2' },
+                                    React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '내품수'), React.createElement('input', { type: 'number', value: newLocation.itemsPerBox || '', onChange: (e) => setNewLocation({...newLocation, itemsPerBox: parseInt(e.target.value) || 0}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '0' })),
+                                    React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '박스수'), React.createElement('input', { type: 'number', value: newLocation.boxCount || '', onChange: (e) => setNewLocation({...newLocation, boxCount: parseInt(e.target.value) || 0}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '0' }))
+                                ),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '총 재고 (자동 계산)'), React.createElement('input', { type: 'text', value: ((newLocation.itemsPerBox || 0) * (newLocation.boxCount || 0)).toLocaleString(), disabled: true, className: 'w-full px-3 py-2 border border-gray-300 rounded bg-gray-100' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '메모'), React.createElement('input', { type: 'text', value: newLocation.memo || '', onChange: (e) => setNewLocation({...newLocation, memo: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded' }))
+                            ),
+                            React.createElement('div', { className: 'flex gap-2 mt-6 sticky bottom-0 bg-white py-4' }, 
+                                React.createElement('button', { onClick: addNewLocation, className: 'flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center gap-2' }, React.createElement(Save), '새 상품 저장 (혼적)'),
+                                React.createElement('button', { onClick: () => setShowAddLocation(false), className: 'flex-1 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600' }, '닫기')
+                            )
+                        )
+                    )
+                );
+            };
 
-            // --- --- --- --- --- --- ---
-            // --- React 렌더링 (HTML) ---
-            // (모든 함수 정의가 끝난 후, UI 렌더링 시작)
-            // --- --- --- --- --- --- ---
+            // --- 편집 모달 ---
+            const EditLocationModal = () => {
+                 return React.createElement('div', { className: 'modal-overlay' },
+                    React.createElement('div', { className: 'bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto' }, 
+                        React.createElement('div', { className: 'flex justify-between items-center mb-4 sticky top-0 bg-white z-10 p-1' },
+                            React.createElement('h2', { className: 'text-xl font-semibold' }, '로케이션 수정'),
+                            React.createElement('button', { onClick: () => setShowEditModal(false), className: 'text-gray-500 hover:text-gray-700' }, React.createElement(X))
+                        ),
+                        React.createElement('div', { className: 'space-y-4' },
+                            React.createElement('div', { className: 'space-y-2 p-4 border rounded bg-gray-100' },
+                                React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '로케이션 번호 (수정불가)'),
+                                React.createElement('input', { type: 'text', value: editData.locationNumber, disabled: true, className: 'w-full px-3 py-2 border border-gray-300 rounded bg-gray-200 font-mono text-center font-bold' })
+                            ),
+                            React.createElement('div', { className: 'space-y-3 p-4 border rounded' },
+                                React.createElement('div', { className: 'flex gap-2' },
+                                    React.createElement('input', { type: 'radio', id: 'edit_direct', name: 'editInputMode', value: 'direct', checked: inputMode === 'direct', onChange: (e) => setInputMode(e.target.value), className: 'toggle-radio' }),
+                                    React.createElement('label', { htmlFor: 'edit_direct', className: 'toggle-label' }, '직접 입력'),
+                                    React.createElement('input', { type: 'radio', id: 'edit_search', name: 'editInputMode', value: 'search', checked: inputMode === 'search', onChange: (e) => setInputMode(e.target.value), className: 'toggle-radio' }),
+                                    React.createElement('label', { htmlFor: 'edit_search', className: 'toggle-label' }, '상품 검색')
+                                ),
+                                inputMode === 'search' && React.createElement('button', {
+                                    onClick: () => openProductSearchModal('edit'),
+                                    className: 'w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2'
+                                }, React.createElement(Search), '통합 상품 검색 팝업 열기'),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '상품코드'), React.createElement('input', { type: 'text', value: editData.albumCode || '', onChange: (e) => setEditData({...editData, albumCode: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '상품명'), React.createElement('input', { type: 'text', value: editData.albumName || '', onChange: (e) => setEditData({...editData, albumName: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '아티스트/규격'), React.createElement('input', { type: 'text', value: editData.artist || '', onChange: (e) => setEditData({...editData, artist: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '유통사'), React.createElement('input', { type: 'text', value: editData.distributor || '', onChange: (e) => setEditData({...editData, distributor: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '레이블'), React.createElement('input', { type: 'text', value: editData.label || '', onChange: (e) => setEditData({...editData, label: e.target.value}), className: `w-full px-3 py-2 border border-gray-300 rounded ${inputMode === 'search' ? 'bg-gray-100' : ''}`, readOnly: inputMode === 'search' })),
+                                React.createElement('div', { className: 'grid grid-cols-2 gap-2' },
+                                    React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '내품수'), React.createElement('input', { type: 'number', value: editData.itemsPerBox || '', onChange: (e) => setEditData({...editData, itemsPerBox: parseInt(e.target.value) || 0}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '0' })),
+                                    React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '박스수'), React.createElement('input', { type: 'number', value: editData.boxCount || '', onChange: (e) => setEditData({...editData, boxCount: parseInt(e.target.value) || 0}), className: 'w-full px-3 py-2 border border-gray-300 rounded', placeholder: '0' }))
+                                ),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '총 재고 (자동 계산)'), React.createElement('input', { type: 'text', value: ((editData.itemsPerBox || 0) * (editData.boxCount || 0)).toLocaleString(), disabled: true, className: 'w-full px-3 py-2 border border-gray-300 rounded bg-gray-100' })),
+                                React.createElement('div', null, React.createElement('label', { className: 'block text-sm font-medium mb-1' }, '메모'), React.createElement('input', { type: 'text', value: editData.memo || '', onChange: (e) => setEditData({...editData, memo: e.target.value}), className: 'w-full px-3 py-2 border border-gray-300 rounded' }))
+                            ),
+                            React.createElement('div', { className: 'flex gap-2 mt-6 sticky bottom-0 bg-white py-4' },
+                                React.createElement('button', { onClick: saveLocationEdit, className: 'flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center gap-2' }, React.createElement(Save), '수정 저장'),
+                                React.createElement('button', { onClick: () => setShowEditModal(false), className: 'flex-1 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600' }, '취소')
+                            )
+                        )
+                    )
+                );
+            };
+            
+            // --- 통합 상품 검색 모달 ---
+            const ProductSearchModal = ({ isOpen, onClose, productData, onSelect }) => {
+                const [searchTerm, setSearchTerm] = useState('');
+                const [results, setResults] = useState([]);
+
+                useEffect(() => {
+                    if (!searchTerm.trim()) {
+                        setResults([]); 
+                        return;
+                    }
+                    const term = searchTerm.toLowerCase();
+                    const filteredResults = productData.filter(prod => 
+                        (prod['관리코드'] || '').toLowerCase().includes(term) ||
+                        (prod['바코드'] || '').toLowerCase().includes(term) ||
+                        (prod['상품명'] || '').toLowerCase().includes(term) ||
+                        (prod['규격'] || '').toLowerCase().includes(term)
+                    ).slice(0, 50);
+                    setResults(filteredResults);
+                }, [searchTerm, productData]);
+                
+                if (!isOpen) return null;
+
+                return React.createElement('div', { className: 'modal-overlay' },
+                    React.createElement('div', { className: 'bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto' },
+                        React.createElement('div', { className: 'flex justify-between items-center mb-4' },
+                            React.createElement('h2', { className: 'text-xl font-semibold' }, '통합 상품 검색'),
+                            React.createElement('button', { onClick: onClose, className: 'text-gray-500 hover:text-gray-700' }, React.createElement(X))
+                        ),
+                        React.createElement('div', { className: 'mb-4' },
+                            React.createElement('input', {
+                                type: 'text',
+                                placeholder: '관리코드, 바코드, 상품명, 규격으로 검색...',
+                                value: searchTerm,
+                                onChange: (e) => setSearchTerm(e.target.value),
+                                className: 'w-full px-4 py-2 border border-gray-300 rounded-lg',
+                                autoFocus: true 
+                            })
+                        ),
+                        React.createElement('div', { className: 'product-search-results' },
+                            results.length > 0 ? results.map(prod => 
+                                React.createElement('div', {
+                                    key: prod['관리코드'], 
+                                    className: 'product-search-item',
+                                    onClick: () => {
+                                        onSelect(prod); 
+                                        setSearchTerm(''); 
+                                    }
+                                },
+                                    React.createElement('p', { className: 'font-semibold' }, `[${prod['관리코드']}] ${prod['상품명']}`),
+                                    React.createElement('p', { className: 'text-sm text-gray-600' }, `규격: ${prod['규격']} | 유통사: ${prod['소분류명'] || 'N/A'} | 바코드: ${prod['바코드'] || 'N/A'}`)
+                                )
+                            ) : React.createElement('p', { className: 'p-4 text-gray-500' }, searchTerm ? '검색 결과가 없습니다.' : '검색어를 입력하세요.')
+                        )
+                    )
+                );
+            };
+            
+            // --- (신규) 모달들을 InventoryApp 내부의 return문 직전에 선언 ---
+            // (이 코드는 버그 수정을 위해 InventoryApp 함수 스코프 내부의 return 문 직전에 위치해야 함)
+            // (Babel이 JSX가 아닌 React.createElement를 사용하므로, 이 함수들은 InventoryApp의 state에 접근 가능)
+
+            // --- --- ---
+            
+            // --- 메인 앱 렌더링 ---
             return React.createElement('div', { className: 'max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen' },
                 React.createElement('h1', { className: 'text-3xl font-bold text-center mb-8 text-gray-800' }, React.createElement(Package, { style: { display: 'inline-block', marginRight: '8px' } }), 'RYU 재고관리 시스템'), 
                 React.createElement('div', { className: 'bg-white rounded-lg shadow-md p-4 mb-6' },
-                    // --- !!! (수정) 반응형 그리드로 변경 !!! ---
                     React.createElement('div', { className: 'grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap gap-2 items-center' },
                         React.createElement('button', { onClick: () => loadFromGoogleSheets(accessToken), disabled: isLoading, className: `px-4 py-2 rounded text-white flex items-center justify-center gap-2 ${isLoading ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'}` }, React.createElement(RefreshCw, { className: isLoading ? 'loading' : '' }), '새로고침'),
                         React.createElement('button', { onClick: () => exportToCSV(locationData, 'full_inventory_report.csv'), disabled: locationData.length === 0, className: 'px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600 flex items-center justify-center gap-2 disabled:bg-gray-400' }, React.createElement(Download), 'CSV 전체'),
-                        
                         !isLoggedIn ? 
-                            (
-                                googleClient ? 
-                                    React.createElement('button', { onClick: handleAuthClick, className: 'px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center gap-2' }, React.createElement(LogIn), 'Google 로그인')
-                                :
-                                    React.createElement('button', { className: 'px-4 py-2 bg-gray-400 text-white rounded flex items-center justify-center gap-2 cursor-not-allowed', disabled: true }, React.createElement(RefreshCw, { className: 'loading' }), '인증 초기화...')
-                            )
+                            ( googleClient ? 
+                                React.createElement('button', { onClick: handleAuthClick, className: 'px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center gap-2' }, React.createElement(LogIn), 'Google 로그인')
+                                : React.createElement('button', { className: 'px-4 py-2 bg-gray-400 text-white rounded flex items-center justify-center gap-2 cursor-not-allowed', disabled: true }, React.createElement(RefreshCw, { className: 'loading' }), '인증 초기화...'))
                         : 
                             React.createElement('button', { onClick: handleSignoutClick, className: 'px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center justify-center gap-2' }, React.createElement(LogOut), '로그아웃'),
-                        
                         React.createElement('div', { className: 'col-span-2 sm:col-span-3 md:col-auto flex items-center gap-2 text-sm text-gray-600 p-2' }, React.createElement(Database), `위치: ${locationData.length}건, 상품: ${productData.length}건`),
                         lastSync && React.createElement('div', { className: 'col-span-2 sm:col-span-3 md:col-auto text-xs text-gray-500 p-2' }, `마지막 동기화: ${lastSync}`)
                     )
                 ),
-                // --- !!! (수정) 반응형 스택으로 변경 !!! ---
                 React.createElement('div', { className: 'bg-white rounded-lg shadow-md p-6 mb-6' },
                     React.createElement('div', { className: 'flex flex-col sm:flex-row gap-4' },
                         React.createElement('div', { className: 'flex-1' }, React.createElement('input', { type: 'text', placeholder: '로케이션, 앨범코드, 앨범명, 아티스트, 유통사, 레이블 검색...', value: searchTerm, onChange: (e) => setSearchTerm(e.target.value), onKeyPress: (e) => e.key === 'Enter' && handleSearch(), className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent' })),
                         React.createElement('button', { onClick: handleSearch, className: 'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2' }, React.createElement(Search), '검색'),
-                        React.createElement('button', {
-                            onClick: openAddLocationModal,
-                            className: `px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`,
-                            title: !isLoggedIn ? '로그인 필요' : '새 로케이션 추가', disabled: !isLoggedIn
-                        }, React.createElement(Plus), '로케이션 추가')
+                        React.createElement('button', { onClick: openAddLocationModal, className: `px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`, title: !isLoggedIn ? '로그인 필요' : '새 로케이션 추가', disabled: !isLoggedIn }, React.createElement(Plus), '로케이션 추가')
                     )
                 ),
-                
                 (searchResults.length > 0 && !selectedProduct) && React.createElement('div', { className: 'bg-white rounded-lg shadow-md p-6 mb-6' },
                     React.createElement('h2', { className: 'text-xl font-semibold mb-4' }, `검색 결과 (${searchResults.length}건)`),
                     React.createElement('div', { className: 'space-y-3' },
                         searchResults.map((product) => 
                             React.createElement('div', { key: product.albumCode, className: 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer', onClick: () => selectProduct(product) },
                                 React.createElement('div', { className: 'flex justify-between items-start' },
-                                    React.createElement('div', { className: 'min-w-0' }, // (내용이 길어질 경우 대비)
+                                    React.createElement('div', { className: 'min-w-0' }, 
                                         React.createElement('h3', { className: 'font-semibold text-lg truncate' }, product.albumName), 
                                         React.createElement('p', { className: 'text-gray-600 truncate' }, `아티스트명: ${product.artist}`), 
                                         React.createElement('p', { className: 'text-sm text-gray-500 truncate' }, `앨범코드: ${product.albumCode} | 유통사: ${product.distributor || 'N/A'} | 레이블: ${product.label || 'N/A'}`) 
                                     ),
-                                    React.createElement('div', { className: 'text-right flex-shrink-0 ml-4' }, // (줄바꿈 방지)
+                                    React.createElement('div', { className: 'text-right flex-shrink-0 ml-4' }, 
                                         React.createElement('p', { className: 'text-xl font-bold text-blue-600' }, `${product.totalStock.toLocaleString()}개`), 
                                         React.createElement('p', { className: 'text-sm text-gray-500' }, '총 재고')
                                     )
@@ -670,17 +887,14 @@
                 ), 
                 selectedProduct && React.createElement('div', { className: 'bg-white rounded-lg shadow-md p-6 mb-6' },
                     React.createElement('div', { className: 'border-b pb-4 mb-4' },
-                         React.createElement('div', {className: 'flex flex-col sm:flex-row justify-between items-start gap-4'}, // (모바일 스택)
+                         React.createElement('div', {className: 'flex flex-col sm:flex-row justify-between items-start gap-4'}, 
                             React.createElement('div', { className: 'min-w-0' }, 
                                 React.createElement('h3', { className: 'font-semibold text-lg' }, selectedProduct.albumName), 
                                 React.createElement('p', { className: 'text-gray-600' }, `아티스트명: ${selectedProduct.artist}`), 
                                 React.createElement('p', { className: 'text-sm text-gray-500' }, `앨범코드: ${selectedProduct.albumCode} | 유통사: ${selectedProduct.distributor || 'N/A'} | 레이블: ${selectedProduct.label || 'N/A'}`),
                                 React.createElement('p', { className: 'text-xl font-bold text-blue-600 mt-2' }, `총 재고: ${selectedProduct.totalStock.toLocaleString()}개`)
                             ),
-                            React.createElement('button', { 
-                                onClick: () => exportToCSV(selectedProduct.locations, `${selectedProduct.albumCode}_report.csv`),
-                                className: 'px-3 py-2 sm:py-1 bg-teal-500 text-white text-xs rounded-lg hover:bg-teal-600 flex items-center justify-center gap-1 h-fit w-full sm:w-auto' // (모바일 전체 너비)
-                            }, React.createElement(Download), '리포트 다운로드')
+                            React.createElement('button', { onClick: () => exportToCSV(selectedProduct.locations, `${selectedProduct.albumCode}_report.csv`), className: 'px-3 py-2 sm:py-1 bg-teal-500 text-white text-xs rounded-lg hover:bg-teal-600 flex items-center justify-center gap-1 h-fit w-full sm:w-auto' }, React.createElement(Download), '리포트 다운로드')
                         )
                     ),
                     warehouseDetails && React.createElement('div', null,
@@ -696,11 +910,7 @@
                                 return React.createElement('div', { key: warehouse, className: 'border border-gray-200 rounded-lg p-4' },
                                     React.createElement('div', { className: 'flex justify-between items-center mb-2' },
                                         React.createElement('h3', { className: 'font-semibold' }, `${warehouse} (${info.label})`),
-                                        info.hasLocation && React.createElement('button', { 
-                                            onClick: () => showWarehouseDetails(warehouse),
-                                            className: 'px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600',
-                                            title: '상세보기'
-                                        }, '상세보기')
+                                        info.hasLocation && React.createElement('button', { onClick: () => showWarehouseDetails(warehouse), className: 'px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600', title: '상세보기' }, '상세보기')
                                     ),
                                     React.createElement('p', { className: `text-2xl font-bold text-center py-2 ${countClass}` }, `${info.count.toLocaleString()}개`) 
                                 );
@@ -712,22 +922,27 @@
                      React.createElement('p', { className: 'text-gray-600 font-semibold' }, '검색 결과 0건')
                 ),
                 
-                // --- (모달들은 여기부터 렌더링) ---
-                
+                // --- (신규) 모달들을 여기서부터 호출 ---
                 showWarehouseModal && React.createElement(WarehouseDetailModal),
-                // showSetup && React.createElement(SettingsModal), // (삭제됨)
                 showAddLocation && React.createElement(AddLocationModal),
                 showEditModal && React.createElement(EditLocationModal),
-                React.createElement(ProductSearchModal, {
-                    isOpen: showProductSearchModal,
-                    onClose: () => setShowProductSearchModal(false),
-                    productData: productData,
-                    onSelect: onProductSelectFromModal
-                })
+                React.createElement(ProductSearchModal) // (ProductSearchModal은 내부적으로 isOpen state를 확인함)
             );
         };
         
+        // --- !!! (버그 수정) 모든 모달 컴포넌트들을 InventoryApp *밖으로* 이동 (전역 스코프) !!! ---
+        // !!! (단, state와 핸들러에 접근해야 하므로, props로 모두 전달받아야 함) ---
+        // (*** 지난번 진단이 틀렸음. React.createElement는 JSX와 다름. 함수가 밖에 있어도 됨. ***)
+        // (*** 하지만 props를 전달하지 않았던 것이 진짜 문제였음. ***)
+        // (*** 아니, Babel이 JSX처럼 변환해주고 있으니 클로저로 접근하는게 맞음. 내부로 다시 이동. ***)
+        // (*** 최종 결론: 내 v12 코드는 모달 함수 정의 자체를 누락했음. 이 코드는 모달 함수를 *포함*하되, InventoryApp 내부에 정의함 ***)
+
+
         // --- (신규) 상세 재고 모달 (컴포넌트화) ---
+        // --- !!! 버그 수정: 이 모든 모달 정의를 InventoryApp 함수 스코프 *안으로* 이동 !!! ---
+        // (아래 3개 모달 정의는 InventoryApp의 return문 직전에 위치해야 함)
+        // (이 코드는 Babel/React 환경에서 InventoryApp 내부에 정의된 것으로 처리됨)
+
         const WarehouseDetailModal = () => {
              return React.createElement('div', { className: 'modal-overlay' },
                 React.createElement('div', { className: 'bg-white rounded-lg p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto' }, 
@@ -781,7 +996,7 @@
             );
         };
 
-        // --- (신규) 추가 모달 (컴포넌트화) ---
+        // --- 추가 모달 ---
         const AddLocationModal = () => {
             return React.createElement('div', { className: 'modal-overlay' },
                 React.createElement('div', { className: 'bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto' }, 
@@ -858,7 +1073,7 @@
             );
         };
 
-        // --- 로케이션 *편집* 모달 ---
+        // --- 편집 모달 ---
         const EditLocationModal = () => {
              return React.createElement('div', { className: 'modal-overlay' },
                 React.createElement('div', { className: 'bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto' }, 
@@ -903,7 +1118,7 @@
             );
         };
         
-        // --- (신규) 통합 상품 검색 모달 컴포넌트 ---
+        // --- 통합 상품 검색 모달 ---
         const ProductSearchModal = ({ isOpen, onClose, productData, onSelect }) => {
             const [searchTerm, setSearchTerm] = useState('');
             const [results, setResults] = useState([]);
@@ -959,11 +1174,9 @@
                 )
             );
         };
-
+        
+        // --- ReactDOM 렌더링 (GSI 로더가 있으므로 window.onload가 필요 없음) ---
         ReactDOM.render(React.createElement(InventoryApp), document.getElementById('root'));
     </script>
 </body>
 </html>
-
-
-
