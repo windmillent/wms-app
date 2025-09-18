@@ -935,7 +935,11 @@
             );
         };
 
-        ReactDOM.render(React.createElement(InventoryApp), document.getElementById('root'));
+        // (신규) 모든 외부 스크립트(Google GSI)가 로드된 후 React 앱을 실행
+        window.onload = () => {
+            ReactDOM.render(React.createElement(InventoryApp), document.getElementById('root'));
+        };
     </script>
 </body>
 </html>
+
